@@ -51,7 +51,7 @@ class Control(UIObject):
         return super(Control,self).__init__(_label)
         
     def SetAnnotation(self, _annotation):
-        commands.button(self.UI, edit = True, annotation = _annotation)
+        commands.control(self.UI, edit = True, annotation = _annotation)
 
 class Window(UIObject):
     def __init__(self,_label,_widthHeight = [200,200],_minimizeButton = True,_sizeable = True):
@@ -508,7 +508,7 @@ class Converter:
         
         
         self.bConvertAnimInPlace    = True
-        self.bCutAllKeys            = False
+        self.bCutAllKeys            = None
         self.bRootJoint             = None
         self.rootName               = None
         self.hipName                = None
@@ -516,7 +516,7 @@ class Converter:
         self.worldForwardAxis       = None
         self.ffHeight               = None
         self.btnHeight              = None
-        self.omClamp                = None
+        self.onClamp                = None
         self.btnCutPaste            = None
         self.exportWindow           = None
         self.textField              = None
@@ -537,15 +537,21 @@ class Converter:
         
         self.textDirectory = TextButton("Animation Export Directory", "Browse")
         self.textDirectory.SetCommand(self.SetDirectory)
+        self.textDirectory.SetAnnotation("The directory to export converted animations")
         
         self.worldUpAxis                                = OptionMenu("World Up",["Y","Z"], 200)
         self.worldForwardAxis                           = OptionMenu("World Forward",["Z","X"], 200)
+        self.worldUpAxis.SetAnnotation("The current up world axis of the scene used for conversion")
+        self.worldForwardAxis.SetAnnotation("The current forward world axis of the scene used for conversion")
         
         self.rootName                                   = TextField("Root Joint Name" , 200)
         self.hipName                                    = TextField("Hip Joint Name" , 200)
+        self.rootName.SetAnnotation("The name to give the root joint")
+        self.hipName.SetAnnotation("The name of the existing hip joint")
         
         bttnParent = Button("Parent", 200)
         bttnParent.SetCommand('Commands.ParentSelected()')
+        bttnParent.SetAnnotation("Parent selected objects")
         
         Button("Undo <-", 200.0).SetCommand("commands.undo()")
         Button("Redo ->", 200.0).SetCommand("commands.redo()")
@@ -560,8 +566,9 @@ class Converter:
         column2.SetBackgroundColorOne(.3)
         
         self.bRootJoint                                     = CheckBox("Add Root Joint", False)
+        self.bRootJoint.SetAnnotation("Add a root joint to the converted animation")
         
-        bttnConvert                                         = Button("Convert Animation To In Place", 200)
+        bttnConvert                                         = Button("Animation in Place", 200)
         bttnConvert.SetCommand(self.ConvertAnimationToInPlace)
         Button("Export Animation", 200).SetCommand(self.ShowExportWindow)
         
@@ -586,8 +593,11 @@ class Converter:
         self.btnHeight.SetAnnotation("Set the Hip Height from the hip joint name specified in settings")
         self.btnHeight.SetCommand(self.GetAndSetHipHeight)
         
+        self.bCutAllKeys = CheckBox("Apply to Y Axis", False)
+        
         '''Add root motion button'''
-        self.omClamp                                        = OptionMenu("Clamp Root",["UnConstrain 0","Constrain 0"], 200)
+        self.onClamp                                        = OptionMenu("Clamp Root",["UnConstrain","Constrain"], 200)
+        self.onClamp.SetAnnotation("Constrain the animation to 0 on the world up axis")
         self.btnCutPaste                                    = Button("Add Root Motion", 200)
         self.btnCutPaste.SetCommand(self.CutAndPasteKeys)
         
@@ -600,7 +610,7 @@ class Converter:
         
        
         #add colums to tab
-        tabs.SetTabLabel(((column1.GetUI(), "Settings"), (column2.GetUI(), "Movement to InPlace"), (column3.GetUI(), "Root Motion")))
+        tabs.SetTabLabel(((column1.GetUI(), "Settings"), (column2.GetUI(), "InPlace"), (column3.GetUI(), "Root Motion")))
 
         window.Show()
         
@@ -639,7 +649,7 @@ class Converter:
             Commands.SetTime(0)
             height = Commands.GetTranslation(self.hipName.GetText())[0][1]
             times = Commands.GetAnimatedTimes(self.hipName.GetText(), "translate" + self.worldUpAxis.GetValue())           
-            keys = commands.keyframe(self.hipName.GetText() + "_" + "translate" + self.worldUpAxis.GetValue(), q= True, vc = True) or []
+            keys = commands.keyframe(self.hipName.GetText() + "." + "translate" + self.worldUpAxis.GetValue(), q= True, vc = True) or []
             for f in range(len(keys)):
                 if(keys[f] > height):                  
                     commands.cutKey(self.hipName.GetText(), attribute = "translate" + self.worldUpAxis.GetValue(), index= (f, (f)))
@@ -678,14 +688,14 @@ class Converter:
             Commands.DeselectAll()
             self.AddRootJoint()
             attributes = ['translateX','translateY','translateZ']
-            currentOption = self.omClamp.GetValue()
+            currentOption = self.onClamp.GetValue()
             Commands.SetTime(0)
             position = Commands.GetTranslation(self.hipName.GetText())
             for i in range(len(attributes)):
                     times = Commands.GetAnimatedTimes(self.hipName.GetText(), attributes[i]) or []       
-                    keys = commands.keyframe(self.hipName.GetText() + "_" + attributes[i], q= True, vc = True) or []
+                    keys = commands.keyframe(self.hipName.GetText() + "." + attributes[i], q= True, vc = True) or []
                     if(attributes[i] == "translateY"):
-                        if(self.bCutAllKeys  == False):
+                        if(self.bCutAllKeys.GetValue()  == False):
                             if(currentOption == "Constrain To Ground"):
                                 for f in range(len(keys)):
                                     if(keys[f] > position[0][1]):
