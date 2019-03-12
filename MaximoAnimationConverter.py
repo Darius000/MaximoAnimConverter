@@ -46,6 +46,13 @@ class UIObject(object):
         self.backgroundColor = (value, value, value)
         commands.control(self.UI, edit = True, backgroundColor = self.backgroundColor)
 
+class Control(UIObject):
+    def __init__(self,_label):
+        return super(Control,self).__init__(_label)
+        
+    def SetAnnotation(self, _annotation):
+        commands.button(self.UI, edit = True, annotation = _annotation)
+
 class Window(UIObject):
     def __init__(self,_label,_widthHeight = [200,200],_minimizeButton = True,_sizeable = True):
         self.widthHeight = _widthHeight
@@ -60,8 +67,7 @@ class Window(UIObject):
     def Show(self):
         commands.showWindow(self.UI)
         
-
-class Text(UIObject):
+class Text(Control):
     def __init__(self, _label):
         return super(Text, self).__init__(_label)
         
@@ -78,7 +84,7 @@ class Text(UIObject):
     def SetHighlightColor(self, color = [1.0, 1.0, 1.0]):
         commands.text(self.UI, edit = True, highlightColor = color)
         
-class FloatFieldGrp(UIObject):
+class FloatFieldGrp(Control):
     def __init__(self,_label,_numFields = 1,_width = 100,_startValues = [0.0, 0.0, 0.0, 0.0]):
         self.width = _width
         self.values = _startValues
@@ -113,7 +119,7 @@ class FloatFieldGrp(UIObject):
     def SetColumnWidth(self, columnNumber = int, width = int):
         commands.floatFieldGrp(self.UI, edit = True, columnWidth = [columnNumber, width])  
         
-class IntFieldGrp(UIObject):
+class IntFieldGrp(Control):
     def __init__(self,_label,_numFields = 1,_width = 100,_startValues = [0, 0, 0, 0]):
         self.width = _width
         self.values = _startValues
@@ -148,7 +154,7 @@ class IntFieldGrp(UIObject):
     def SetColumnWidth(self, columnNumber = int, width = int):
         commands.intFieldGrp(self.UI, edit = True, columnWidth = [columnNumber, width]) 
         
-class FloatSlider(UIObject):
+class FloatSlider(Control):
     def __init__(self, _label, _min = 0.0, _max = 1.0, _step = .01):
         self.min = _min
         self.max = _max
@@ -168,8 +174,7 @@ class FloatSlider(UIObject):
     def SetCommand(self, command):
         commands.floatSliderGrp(self.UI, edit = True, dragCommand = command)
         
-
-class Button(UIObject):
+class Button(Control):
     def __init__(self, _label,_width = 1):
         self.width = _width
         super(Button, self).__init__(_label)
@@ -190,7 +195,7 @@ class Button(UIObject):
             color = [0.3, 0.3, 0.3]
         self.SetBackgroundColor(self.backgroundColor)
               
-class CheckBox(UIObject):
+class CheckBox(Control):
     def __init__(self, _label,_value = True):
         self.value = _value
         super(CheckBox,self).__init__(_label)
@@ -220,7 +225,7 @@ class CheckBox(UIObject):
             color = [0.3, 0.3, 0.3]
         commands.checkBox(self.UI, edit = True, enable = enable, backgroundColor = color)
 
-class OptionMenu(UIObject):
+class OptionMenu(Control):
     def __init__(self, _label, _items = None, _width = 200):
         self.width = _width
         self.items = _items;
@@ -250,7 +255,7 @@ class OptionMenu(UIObject):
             color = [0.3, 0.3, 0.3]
         commands.optionMenu(self.UI, edit = True, enable = enable, backgroundColor = color)
 
-class TextField(UIObject):
+class TextField(Control):
     def __init__(self, _label, _width = 100):
         self.width = _width
         super(TextField,self).__init__(_label)
@@ -265,7 +270,7 @@ class TextField(UIObject):
     def SetText(self,text):
         commands.textFieldGrp(self.UI, edit = True, text = text)
      
-class TextButton(UIObject):
+class TextButton(Control):
     def __init__(self, _label, _buttonLabel = "Button", _edit = True):
         self.buttonLabel = _buttonLabel
         self.edit = _edit
@@ -297,7 +302,7 @@ class TextButton(UIObject):
     def SetColumnAlignment(self, alignment):
         commands.textFieldButtonGrp(self.UI, edit = True, columnAlign = alignment)
         
-class Image(UIObject):
+class Image(Control):
     def __init__(self, _label, _filePath = "",_width = 128,_height = 128):
         self.filepath = _filePath
         self.width = _width
@@ -327,7 +332,6 @@ class Column(UIObject):
      
     def SetAdjustable(self, adjustable):
         commands.columnLayout(self.UI, edit = True, adjustableColumn = adjustable)
-
 
 class Row(UIObject):
     def __init__(self, _label, _numColumns = 1, _width = [1, 30]):
@@ -534,7 +538,7 @@ class Converter:
         self.textDirectory = TextButton("Animation Export Directory", "Browse")
         self.textDirectory.SetCommand(self.SetDirectory)
         
-        self.worldUpAxis                                = OptionMenu("World Up         ",["Y","Z"], 200)
+        self.worldUpAxis                                = OptionMenu("World Up",["Y","Z"], 200)
         self.worldForwardAxis                           = OptionMenu("World Forward",["Z","X"], 200)
         
         self.rootName                                   = TextField("Root Joint Name" , 200)
@@ -574,11 +578,12 @@ class Converter:
         column3.SetBackgroundColorOne(.3)
         
         '''Hip joint height'''
-        self.ffHeight                                       = FloatFieldGrp("Hip Height", 1, 200)
+        self.ffHeight                                       = FloatFieldGrp("Hip Joint Height", 1, 200)
         self.ffHeight.SetAdjustable(1)
         self.ffHeight.SetAlignment(1, "left")
         
         self.btnHeight                                      = Button("Set Hip Height", 200)
+        self.btnHeight.SetAnnotation("Set the Hip Height from the hip joint name specified in settings")
         self.btnHeight.SetCommand(self.GetAndSetHipHeight)
         
         '''Add root motion button'''
