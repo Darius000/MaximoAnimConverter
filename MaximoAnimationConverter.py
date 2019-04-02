@@ -1,7 +1,11 @@
 import maya as maya
 import maya.cmds as commands
 from functools import partial
+import ConfigParser
+import os
 
+config = ConfigParser.RawConfigParser()
+configDir = os.path.dirname(__file__) + "\config.cfg";
 
 class UIObject(object):
     def __init__(self,_label):
@@ -47,18 +51,22 @@ class UIObject(object):
         commands.control(self.UI, edit = True, backgroundColor = self.backgroundColor)
 
 class Window(UIObject):
-    def __init__(self,_label,_widthHeight = [200,200],_minimizeButton = True,_sizeable = True):
+    def __init__(self,_label,_widthHeight = [200,200],menuBar = False,_minimizeButton = True,_sizeable = True):
         self.widthHeight = _widthHeight
         self.minimize = _minimizeButton
         self.sizeable = _sizeable
+        self.menuBar = menuBar
         return super(Window,self).__init__(_label)
 
     def Construct(self):
-        self.UI = commands.window(title = self.label, widthHeight = self.widthHeight ,minimizeButton = self.minimize,sizeable = self.sizeable);
+        self.UI = commands.window(title = self.label, menuBar = self.menuBar, widthHeight = self.widthHeight ,minimizeButton = self.minimize,sizeable = self.sizeable);
         super(Window,self).Construct()
 
     def Show(self):
         commands.showWindow(self.UI)
+        
+    def MenuBar(self, show, barWidth = 200):
+        commands.window(self.UI, edit = True, mainMenuBar = show)
         
 
 class Text(UIObject):
@@ -89,10 +97,16 @@ class FloatFieldGrp(UIObject):
         self.UI = commands.floatFieldGrp(label = self.label, width = self.width, value = self.values, numberOfFields = self.numFields)
         super(FloatFieldGrp,self).Construct()
 
-    def GetValue(self):
+    def GetValues(self):
         return commands.floatFieldGrp(self.UI, query =True, value =True)
         
-    def SetValue(self, value):
+    def GetValue1(self):
+        return commands.floatFieldGrp(self.UI, query =True, value1 =True)
+        
+    def SetValue1(self, value):
+        commands.floatFieldGrp(self.UI, edit = True, value1 = value)
+        
+    def SetValues(self, value):
         commands.floatFieldGrp(self.UI, edit = True, value = value)
         
     def SetWidth(self, width = int):
@@ -210,6 +224,9 @@ class CheckBox(UIObject):
      
     def GetValue(self):
         return commands.checkBox(self.UI, query = True, value = True)
+    
+    def SetValue(self, value):
+        commands.checkBox(self.UI, edit = True, value = value)
         
     def Enable(self, enable):
         super(CheckBox, self).Enable(enable)
@@ -234,6 +251,9 @@ class OptionMenu(UIObject):
 
     def GetValue(self):
          return commands.optionMenu(self.UI,query = True,v = True)
+         
+    def SetValue(self, value):
+         commands.optionMenu(self.UI, edit = True, v = value)
          
     def SetCommand(self, command):
         commands.optionMenu(self.UI, edit = True, changeCommand = command)
@@ -362,7 +382,21 @@ class Tab(UIObject):
         
     def SetTabLabel(self, labels = None):
         commands.tabLayout(self.UI, edit = True, tabLabel = labels)
+
+class Menu(UIObject):
+    def __init__(self, label, tearOff = False):
+        self.tearOff = tearOff;
+        super(Menu, self).__init__(label)
         
+    def Construct(self):
+        self.UI = commands.menu(label=self.label, tearOff = self.tearOff)
+        super(Menu, self).Construct()
+    
+    def AddItem(self, label, command):
+        commands.menuItem(label = label, c = command)
+    
+    def AddDivider(self, label = ""):
+        commands.menuItem(label = label, divider = True)
     
 class Commands():
     @staticmethod
@@ -500,9 +534,6 @@ class Commands():
 
 class Converter:
     def __init__(self):
-        pass
-        
-        
         self.bConvertAnimInPlace    = True
         self.bCutAllKeys            = False
         self.bRootJoint             = None
@@ -521,7 +552,12 @@ class Converter:
     def Construct(self):
         '''window'''
         window                                          = Window("Maximo To Unreal", (500, 400), True, False)
-        
+        window.MenuBar(True)
+        menu = Menu("File", True)
+        menu.AddItem("Save Settings", self.SaveConfig)
+        menu.AddItem("Reset Settings", self.ResetConfig)
+        menu.AddDivider()
+        menu.AddItem("Quit", "")
         '''tab'''
         tabs                                            = Tab(500.0, 500.0, (50.0,50.0))
         '''columns'''
@@ -542,6 +578,9 @@ class Converter:
         
         bttnParent = Button("Parent", 200)
         bttnParent.SetCommand('Commands.ParentSelected()')
+        
+        bttnRootJoint = Button("Add Root Joint", 200)
+        bttnRootJoint.SetCommand(self.AddRootJoint)
         
         Button("Undo <-", 200.0).SetCommand("commands.undo()")
         Button("Redo ->", 200.0).SetCommand("commands.redo()")
@@ -599,8 +638,15 @@ class Converter:
 
         window.Show()
         
+        self.LoadConfig()
+        
     def SetDirectory(self, *args):
-        self.directory = commands.fileDialog2(fileMode = 2,dialogStyle = 2, fileFilter = 'FBX export')[0]
+        fileDir = commands.fileDialog2(fileMode = 2,dialogStyle = 2, fileFilter = 'FBX export')
+        print(fileDir)
+        if(len(fileDir) > 0):
+            self.directory = fileDir[0]
+        else:
+            self.directory = ""
         self.textDirectory.SetText(self.directory)
     
     def ShowExportWindow(self, *args):
@@ -659,14 +705,13 @@ class Converter:
             Commands.Warning("Provide the name of the hip|root joint in Settings tab")
             return
         return
-        
+
     def GetAndSetHipHeight(self, *args):
         if(self.hipName.GetText()):
             height = Commands.GetTranslation(self.hipName.GetText())[0][1]
             self.ffHeight.SetValue([height , 0.0, 0.0, 0.0])
         else:
             Commands.Warning("Provide the name of the hip joint in Settings tab")
-
 
     def CutAndPasteKeys(self, *args):
         if(self.rootName.GetText()):
@@ -701,7 +746,47 @@ class Converter:
                         commands.pasteKey(self.rootName.GetText(), attribute = attributes[i], time = (0,0), valueOffset = -position[0][2])
         else:
             Commands.Warning("No root joint name povided in Settings tab")
-        
-#Create UI
-converter = Converter()
-converter.Construct()
+
+    def SaveConfig(self, *args):
+        if(config.has_section("Settings") == False):
+            config.add_section("Settings")
+        config.set("Settings", "ExportDir", self.directory)
+        config.set("Settings", "RootJoint", self.rootName.GetText())
+        config.set("Settings", "HipJoint", self.hipName.GetText())
+        config.set("Settings", "HipHeight", self.ffHeight.GetValue1())
+        config.set("Settings", "ClampRoot", self.omClamp.GetValue())
+        config.set("Settings", "WorldUp", self.worldUpAxis.GetValue())
+        config.set("Settings", "WorldForward", self.worldForwardAxis.GetValue())
+        state = self.bRootJoint.GetValue()
+        config.set("Settings", "AddRoot", "true" if state == True else "false" )
+        file = open(configDir, "wb")
+        with file as configFile:
+            config.write(configFile)
+        file.close()
+
+    def LoadConfig(self, *args):
+        file = open(configDir, "r")
+        if(file):
+            config.read(configDir)
+            self.directory = config.get("Settings", "ExportDir")
+            self.textDirectory.SetText(self.directory)
+            self.rootName.SetText(config.get("Settings", "RootJoint"))
+            self.hipName.SetText(config.get("Settings", "HipJoint"))
+            self.omClamp.SetValue(config.get("Settings", "ClampRoot"))
+            self.worldUpAxis.SetValue(config.get("Settings", "WorldUp"))
+            self.worldForwardAxis.SetValue(config.get("Settings", "WorldForward"))
+            self.ffHeight.SetValue1(config.getfloat("Settings", "hipheight"))
+            self.bRootJoint.SetValue(config.getboolean("Settings", "AddRoot"))
+            file.close()
+
+    def ResetConfig(self, *args):
+        self.directory = ""
+        self.textDirectory.SetText(self.directory)
+        self.rootName.SetText("")
+        self.hipName.SetText("")
+        self.omClamp.SetValue("UnConstrain 0")
+        self.worldUpAxis.SetValue("Y")
+        self.worldForwardAxis.SetValue("Z")
+        self.ffHeight.SetValue1(0.0)
+        self.bRootJoint.SetValue(False)
+
