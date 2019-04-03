@@ -90,7 +90,7 @@ class Commands():
             return
     
     @staticmethod
-    def ParentSelected():
+    def ParentSelected(*args):
         if(Commands.GetNumSelected() > 1):
             children = []
             first = Commands.GetSelected()[0]
@@ -104,7 +104,7 @@ class Commands():
             Commands.Error("No objects selected")
             
     @staticmethod
-    def ParentShapes():
+    def ParentShapes(*args):
         children = [] 
         first = Commands.GetSelected()[0]
         for i in range(len(Commands.GetSelected()) - 1):

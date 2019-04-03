@@ -12,7 +12,7 @@ configDir = os.path.dirname(__file__) + "\config.cfg";
 class Converter:
     def __init__(self):
         self.bConvertAnimInPlace    = True
-        self.bCutAllKeys            = False
+        self.bCutAllKeys            = True
         self.bRootJoint             = None
         self.rootName               = None
         self.hipName                = None
@@ -28,7 +28,7 @@ class Converter:
         
     def Construct(self):
         '''window'''
-        window                                          = UI.Window("Maximo To Unreal", (500, 400), True, True, False)
+        window                                          = UI.Window("Animation to Root Motion", (500, 400), True, True, False)
         window.MenuBar(True)
         menu = UI.Menu("File", True)
         menu.AddItem("Save Settings", self.SaveConfig)
@@ -57,14 +57,14 @@ class Converter:
         self.hipName.SetAnnotation("The name of the existing hip joint")
         
         bttnParent = UI.Button("Parent", 200)
-        bttnParent.SetCommand('Statics.Commands.ParentSelected()')
+        bttnParent.SetCommand(Statics.Commands.ParentSelected)
         bttnParent.SetAnnotation("Parent selected objects")
         
         bttnRootJoint = UI.Button("Add Root Joint", 200)
         bttnRootJoint.SetCommand(self.AddRootJoint)
         
-        UI.Button("Undo <-", 200.0).SetCommand("Statics.Commands.undo()")
-        UI.Button("Redo ->", 200.0).SetCommand("Statics.Commands.redo()")
+        UI.Button("Undo <-", 200.0).SetCommand(commands.undo)
+        UI.Button("Redo ->", 200.0).SetCommand(commands.redo)
         
         column1.SetParent( tabs.GetUI() )
         
@@ -82,8 +82,8 @@ class Converter:
         bttnConvert.SetCommand(self.ConvertAnimationToInPlace)
         UI.Button("Export Animation", 200).SetCommand(self.ShowExportWindow)
         
-        UI.Button("Undo <-", 200.0).SetCommand("Statics.Commands.undo()")
-        UI.Button("Redo ->", 200.0).SetCommand("Statics.Commands.redo()")
+        UI.Button("Undo <-", 200.0).SetCommand(commands.undo)
+        UI.Button("Redo ->", 200.0).SetCommand(commands.redo)
         
         column2.SetParent( tabs.GetUI() )
         
@@ -112,8 +112,8 @@ class Converter:
         
         UI.Button("Export Animation", 200).SetCommand(self.ShowExportWindow)
         
-        UI.Button("Undo <-", 200.0).SetCommand("Statics.Commands.undo()")
-        UI.Button("Redo ->", 200.0).SetCommand("Statics.Commands.redo()")
+        UI.Button("Undo <-", 200.0).SetCommand(commands.undo)
+        UI.Button("Redo ->", 200.0).SetCommand(commands.redo)
         
         column3.SetParent( tabs.GetUI() )
         
@@ -194,7 +194,7 @@ class Converter:
     def GetAndSetHipHeight(self, *args):
         if(self.hipName.GetText()):
             height = Statics.Commands.GetTranslation(self.hipName.GetText())[0][1]
-            self.ffHeight.SetValue([height , 0.0, 0.0, 0.0])
+            self.ffHeight.SetValue1(height)
         else:
             Statics.Commands.Warning("Provide the name of the hip joint in Settings tab")
 
