@@ -1,5 +1,5 @@
-import MaximoAnimationConverter as mac
-converter = mac.Converter()
-converter.Construct()
+import MaximoAnimConverter.AnimationConverter as mac
 
-print('import startup' ) 
+
+print('imported Animation Converter' ) 
+
