@@ -17,6 +17,6 @@ The folder setup should be
 Open maya and execute the following lines or place them as shelve button
 
 ```
-converter = mac.Converter()
+converter = ac.Converter()
 converter.Construct()
 ```

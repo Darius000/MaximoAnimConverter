@@ -26,9 +26,7 @@ class Converter:
         self.textField              = None
         self.directory              = ""
         self.attributes             = []
-        self.translateX = None
-        self.translateY = None
-        self.translateZ = None
+        self.translation = None
 
     def Construct(self):
         '''window'''
@@ -79,7 +77,7 @@ class Converter:
         column2.SetWidth(500.0)
         column2.SetBackgroundColorOne(.3)
         
-        self.bRootJoint                                     = UI.CheckBox("Add Root Joint", False)
+        self.bRootJoint                                     = UI.CheckBox("Add Root Joint")
         self.bRootJoint.SetAnnotation("Add a root joint to the converted animation")
         
         bttnConvert                                         = UI.Button("Convert Animation To In Place", 200)
@@ -107,22 +105,22 @@ class Converter:
         self.btnHeight.SetCommand(self.GetAndSetHipHeight)
         self.btnHeight.SetAnnotation("Set the default Hip Height from the hip joint in the bind pose name specified in settings")
     
-        self.translateX = UI.CheckBox("Translate X", True)
-        self.translateX.SetOnCommand(lambda *args : self.attributes.append("translateX"))
-        self.translateX.SetOffCommand(lambda *args : self.attributes.remove("translateX"))
+        self.translation = UI.CheckBox("Translation", 3)
+        self.translation.SetOnCommand1(lambda *args : self.attributes.append("translateX"))
+        self.translation.SetOffCommand1(lambda *args : self.attributes.remove("translateX"))
+        self.translation.SetOnCommand2(lambda *args : self.attributes.append("translateY"))
+        self.translation.SetOffCommand2(lambda *args : self.attributes.remove("translateY"))
+        self.translation.SetOnCommand3(lambda *args : self.attributes.append("translateZ"))
+        self.translation.SetOffCommand3(lambda *args : self.attributes.remove("translateZ"))
+        self.translation.SetValue1(True)
+        self.translation.SetValue2(False)
+        self.translation.SetValue3(True)
+        self.attributes = ['translateX','translateZ']
 
-        self.translateY = UI.CheckBox("Translate Y", False)
-        self.translateY.SetOnCommand(lambda *args : self.attributes.append("translateY"))
-        self.translateY.SetOffCommand(lambda *args : self.attributes.remove("translateY"))
-
-        self.translateZ = UI.CheckBox("Translate Z", True)
-        self.translateZ.SetOnCommand(lambda *args : self.attributes.append("translateZ"))
-        self.translateZ.SetOffCommand(lambda *args : self.attributes.remove("translateZ"))
-
-        self.bttnCutAllKeys = UI.CheckBox("Cut All translateY Keys", True)
+        self.bttnCutAllKeys = UI.CheckBox("Cut All translateY Keys")
 
         #Debugging
-        #UI.Button("Check Values", 200).SetCommand(self.PrintValues)
+        UI.Button("Check Values", 200).SetCommand(self.PrintValues)
         
         '''Add root motion button'''
         self.omClamp                                        = UI.OptionMenu("Clamp Root",["UnConstrain 0","Constrain 0"], 200)
@@ -147,7 +145,7 @@ class Converter:
 
     #Debugging
     def PrintValues(self, *args):
-         pass
+         print(self.attributes)
         
     def SetDirectory(self, *args):
         fileDir = commands.fileDialog2(fileMode = 2,dialogStyle = 2, fileFilter = 'FBX export')
@@ -189,7 +187,7 @@ class Converter:
         
     def ConvertAnimationToInPlace(self, *args):
         Statics.Commands.DeselectAll()
-        if(self.bRootJoint.GetValue()):
+        if(self.bRootJoint.GetValue1()):
             self.AddRootJoint()
         if(self.hipName.GetText() and self.rootName.GetText()):
             Statics.Commands.Select(self.hipName.GetText())
@@ -240,7 +238,7 @@ class Converter:
                     times = Statics.Commands.GetAnimatedTimes(self.hipName.GetText(), self.attributes[i]) or []       
                     keys = commands.keyframe(self.hipName.GetText() + "_" + self.attributes[i], q= True, vc = True) or []
                     if(self.attributes[i] == "translateY"):
-                        if(self.bttnCutAllKeys.GetValue() == False):
+                        if(self.bttnCutAllKeys.GetValue1() == False):
                             if(currentOption == "Constrain To Ground"):
                                 for f in range(len(keys)):
                                     if(keys[f] > position[0][1]):
@@ -275,6 +273,11 @@ class Converter:
         if(config.has_section("Attributes") == False):
             config.add_section("Attributes")
 
+        else:
+            items = config.items("Attributes")
+            for item in items:
+                config.remove_option("Attributes", item[0])
+
         config.set("Settings", "ExportDir", self.directory)
         config.set("Settings", "RootJoint", self.rootName.GetText())
         config.set("Settings", "HipJoint", self.hipName.GetText())
@@ -283,21 +286,19 @@ class Converter:
         config.set("Settings", "WorldUp", self.worldUpAxis.GetValue())
         config.set("Settings", "WorldForward", self.worldForwardAxis.GetValue())
 
-        num = 0
-        for att in self.attributes:
-            config.set("Attributes", "Att" + str(num), self.attributes[num])
-            num += 1
+        for i in range(len(self.attributes)):
+            config.set("Attributes", "Att" + str(i), self.attributes[i])
 
-        state = self.bRootJoint.GetValue()
+        state = self.bRootJoint.GetValue1()
         config.set("Settings", "AddRoot", self.BoolToString(state) )
-        state = self.bttnCutAllKeys.GetValue()
+        state = self.bttnCutAllKeys.GetValue1()
         config.set("Settings", "CutAllYKeys", self.BoolToString(state) )
-        state = self.translateX.GetValue()
-        config.set("Settings", "Translate X", self.BoolToString(state) )
-        state = self.translateY.GetValue()
-        config.set("Settings", "Translate Y", self.BoolToString(state) )
-        state = self.translateZ.GetValue()
-        config.set("Settings", "Translate Z", self.BoolToString(state) )
+        state = self.translation.GetValue1()
+        config.set("Settings", "TranslateX", self.BoolToString(state) )
+        state = self.translation.GetValue2()
+        config.set("Settings", "TranslateY", self.BoolToString(state) )
+        state = self.translation.GetValue3()
+        config.set("Settings", "TranslateZ", self.BoolToString(state) )
         file = open(configDir, "wb")
         with file as configFile:
             config.write(configFile)
@@ -315,17 +316,19 @@ class Converter:
             self.worldUpAxis.SetValue(config.get("Settings", "WorldUp"))
             self.worldForwardAxis.SetValue(config.get("Settings", "WorldForward"))
             self.ffHeight.SetValue1(config.getfloat("Settings", "hipheight"))
-            self.bRootJoint.SetValue(config.getboolean("Settings", "AddRoot"))
-            self.translateX.SetValue(config.getboolean("Settings", "Translate X"))
-            self.translateY.SetValue(config.getboolean("Settings", "Translate Y"))
-            self.translateZ.SetValue(config.getboolean("Settings", "Translate Z"))
+            self.bRootJoint.SetValue1(config.getboolean("Settings", "AddRoot"))
+            self.translation.SetValue1(config.getboolean("Settings", "TranslateX"))
+            self.translation.SetValue2(config.getboolean("Settings", "TranslateY"))
+            self.translation.SetValue3(config.getboolean("Settings", "TranslateZ"))
 
             items = config.items("Attributes")
+            if(len(items) > 0):
+                self.attributes = []
             for item in items:
                 self.attributes.append(item[1])
 
             #self.attributes = self.attributes.split(',')
-            self.bttnCutAllKeys.SetValue(config.getboolean("Settings", "CutAllYKeys"))
+            self.bttnCutAllKeys.SetValue1(config.getboolean("Settings", "CutAllYKeys"))
             file.close()
 
     def ResetConfig(self, *args):
@@ -337,10 +340,10 @@ class Converter:
         self.worldUpAxis.SetValue("Y")
         self.worldForwardAxis.SetValue("Z")
         self.ffHeight.SetValue1(0.0)
-        self.bRootJoint.SetValue(False)
-        self.translateX.SetValue(True)
-        self.translateY.SetValue(False)
-        self.translateZ.SetValue(True)
+        self.bRootJoint.SetValue1(False)
+        self.translation.SetValue1(True)
+        self.translation.SetValue2(False)
+        self.translation.SetValue3(True)
         self.attributes = ['translateX','translateZ']
-        self.bttnCutAllKeys.SetValue(True)
+        self.bttnCutAllKeys.SetValue1(True)
 

@@ -206,28 +206,73 @@ class Button(Control):
         self.SetBackgroundColor(self.backgroundColor)
               
 class CheckBox(Control):
-    def __init__(self, _label,_value = True):
-        self.value = _value
+    def __init__(self, _label, numBoxes = 1):
+        self.numBoxes = numBoxes
         super(CheckBox,self).__init__(_label)
 
     def Construct(self):
-        self.UI = commands.checkBox(label = self.label, value = self.value)
+        self.UI = commands.checkBoxGrp(label = self.label, numberOfCheckBoxes = self.numBoxes)
         super(CheckBox,self).Construct()
     
-    def SetCommand(self, command):
-        commands.checkBox(self.UI, edit = True , changeCommand  = command)
+    def SetCommand1(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , changeCommand1  = command)
+
+    def SetCommand2(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , changeCommand2  = command)
+
+    def SetCommand3(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , changeCommand3  = command)
+
+    def SetCommand4(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , changeCommand4  = command)
         
-    def SetOnCommand(self, command):
-        commands.checkBox(self.UI, edit = True , onCommand  = command)
+    def SetOnCommand1(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , onCommand1  = command)
+
+    def SetOnCommand2(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , onCommand2  = command)
+
+    def SetOnCommand3(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , onCommand3  = command)
+
+    def SetOnCommand4(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , onCommand4  = command)
         
-    def SetOffCommand(self, command):
-        commands.checkBox(self.UI, edit = True , offCommand  = command)
+    def SetOffCommand1(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , offCommand1  = command)
+
+    def SetOffCommand2(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , offCommand2  = command)
+
+    def SetOffCommand3(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , offCommand3  = command)
+
+    def SetOffCommand4(self, command):
+        commands.checkBoxGrp(self.UI, edit = True , offCommand4  = command)
      
-    def GetValue(self):
-        return commands.checkBox(self.UI, query = True, value = True)
+    def GetValue1(self):
+        return commands.checkBoxGrp(self.UI, query = True, value1 = True)
+
+    def GetValue2(self):
+        return commands.checkBoxGrp(self.UI, query = True, value2 = True)
+
+    def GetValue3(self):
+        return commands.checkBoxGrp(self.UI, query = True, value3 = True)
+
+    def GetValue4(self):
+        return commands.checkBoxGrp(self.UI, query = True, value4 = True)
     
-    def SetValue(self, value):
-        commands.checkBox(self.UI, edit = True, value = value)
+    def SetValue1(self, value):
+        commands.checkBoxGrp(self.UI, edit = True, value1 = value)
+
+    def SetValue2(self, value):
+        commands.checkBoxGrp(self.UI, edit = True, value2 = value)
+
+    def SetValue3(self, value):
+        commands.checkBoxGrp(self.UI, edit = True, value3 = value)
+
+    def SetValue4(self, value):
+        commands.checkBoxGrp(self.UI, edit = True, value4 = value)
         
     def Enable(self, enable):
         super(CheckBox, self).Enable(enable)
@@ -236,7 +281,7 @@ class CheckBox(Control):
             color = self.backgroundColor
         else:
             color = [0.3, 0.3, 0.3]
-        commands.checkBox(self.UI, edit = True, enable = enable, backgroundColor = color)
+        commands.checkBoxGrp(self.UI, edit = True, enable = enable, backgroundColor = color)
 
 class OptionMenu(Control):
     def __init__(self, _label, _items = None, _width = 200):
