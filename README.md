@@ -1,4 +1,4 @@
-# Animation to Root Motion
+# Animation to Root Motion (Maya)
 
 To use place all the folder inside your maya version script folder
 
