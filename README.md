@@ -1,4 +1,4 @@
-# MaximoAnimConverter
+# Animation to Root Motion
 
 To use place all the folder inside your maya version script folder
 
