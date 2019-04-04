@@ -7,12 +7,12 @@ import Functions.UI as UI
 import Functions.Statics as Statics 
 
 config = ConfigParser.RawConfigParser()
-configDir = os.path.dirname(__file__) + "\config.cfg";
+configDir = os.path.dirname(__file__) + "\config.ini"
 
 class Converter:
     def __init__(self):
         self.bConvertAnimInPlace    = True
-        self.bCutAllKeys            = True
+        self.bttnCutAllKeys            = True
         self.bRootJoint             = None
         self.rootName               = None
         self.hipName                = None
@@ -25,7 +25,11 @@ class Converter:
         self.exportWindow           = None
         self.textField              = None
         self.directory              = ""
-        
+        self.attributes             = []
+        self.translateX = None
+        self.translateY = None
+        self.translateZ = None
+
     def Construct(self):
         '''window'''
         window                                          = UI.Window("Animation to Root Motion", (500, 400), True, True, False)
@@ -101,7 +105,24 @@ class Converter:
         
         self.btnHeight                                      = UI.Button("Set Hip Height", 200)
         self.btnHeight.SetCommand(self.GetAndSetHipHeight)
-        self.btnHeight.SetAnnotation("Set the Hip Height from the hip joint name specified in settings")
+        self.btnHeight.SetAnnotation("Set the default Hip Height from the hip joint in the bind pose name specified in settings")
+    
+        self.translateX = UI.CheckBox("Translate X", True)
+        self.translateX.SetOnCommand(lambda *args : self.attributes.append("translateX"))
+        self.translateX.SetOffCommand(lambda *args : self.attributes.remove("translateX"))
+
+        self.translateY = UI.CheckBox("Translate Y", False)
+        self.translateY.SetOnCommand(lambda *args : self.attributes.append("translateY"))
+        self.translateY.SetOffCommand(lambda *args : self.attributes.remove("translateY"))
+
+        self.translateZ = UI.CheckBox("Translate Z", True)
+        self.translateZ.SetOnCommand(lambda *args : self.attributes.append("translateZ"))
+        self.translateZ.SetOffCommand(lambda *args : self.attributes.remove("translateZ"))
+
+        self.bttnCutAllKeys = UI.CheckBox("Cut All translateY Keys", True)
+
+        #Debugging
+        #UI.Button("Check Values", 200).SetCommand(self.PrintValues)
         
         '''Add root motion button'''
         self.omClamp                                        = UI.OptionMenu("Clamp Root",["UnConstrain 0","Constrain 0"], 200)
@@ -117,13 +138,16 @@ class Converter:
         
         column3.SetParent( tabs.GetUI() )
         
-       
         #add colums to tab
         tabs.SetTabLabel(((column1.GetUI(), "Settings"), (column2.GetUI(), "Movement to InPlace"), (column3.GetUI(), "Root Motion")))
 
         window.Show()
         
         self.LoadConfig()
+
+    #Debugging
+    def PrintValues(self, *args):
+         pass
         
     def SetDirectory(self, *args):
         fileDir = commands.fileDialog2(fileMode = 2,dialogStyle = 2, fileFilter = 'FBX export')
@@ -149,12 +173,19 @@ class Converter:
         self.exportWindow.Show()
         
     def ExportAnimation(self, *args):
+        canExport = False
         if(self.rootName.GetText()):
             Statics.Commands.Select(self.rootName.GetText())
-            commands.file(self.directory + "/" + self.textField2.GetText(), es = True, options = "v=0" , force = True, typ = "FBX export", pr = True )
-            self.exportWindow.Remove()
+            canExport = True
+        elif(self.hipName.GetText()):
+            Statics.Commands.Select(self.hipName.GetText())
+            canExport = True
         else:
             Statics.Commands.Warning("Root joint not provided in Settings")
+
+        if(canExport):
+            commands.file(self.directory + "/" + self.textField2.GetText(), es = True, options = "v=0" , force = True, typ = "FBX export", pr = True )
+            self.exportWindow.Remove()
         
     def ConvertAnimationToInPlace(self, *args):
         Statics.Commands.DeselectAll()
@@ -202,15 +233,14 @@ class Converter:
         if(self.rootName.GetText()):
             Statics.Commands.DeselectAll()
             self.AddRootJoint()
-            attributes = ['translateX','translateY','translateZ']
             currentOption = self.omClamp.GetValue()
             Statics.Commands.SetTime(0)
             position = Statics.Commands.GetTranslation(self.hipName.GetText())
-            for i in range(len(attributes)):
-                    times = Statics.Commands.GetAnimatedTimes(self.hipName.GetText(), attributes[i]) or []       
-                    keys = commands.keyframe(self.hipName.GetText() + "_" + attributes[i], q= True, vc = True) or []
-                    if(attributes[i] == "translateY"):
-                        if(self.bCutAllKeys  == False):
+            for i in range(len(self.attributes)):
+                    times = Statics.Commands.GetAnimatedTimes(self.hipName.GetText(), self.attributes[i]) or []       
+                    keys = commands.keyframe(self.hipName.GetText() + "_" + self.attributes[i], q= True, vc = True) or []
+                    if(self.attributes[i] == "translateY"):
+                        if(self.bttnCutAllKeys.GetValue() == False):
                             if(currentOption == "Constrain To Ground"):
                                 for f in range(len(keys)):
                                     if(keys[f] > position[0][1]):
@@ -224,17 +254,27 @@ class Converter:
                                 commands.cutKey(self.hipName.GetText(), attribute = "translateY", time = ())
                                 commands.pasteKey(self.rootName.GetText(), attribute = "translateY",time = (0,0), valueOffset = -position[0][1])
                         else:
-                            commands.cutKey(self.hipName.GetText(), attribute = attributes[i],time = ())
-                            commands.pasteKey(self.rootName.GetText(), attribute = attributes[i],time = (0,0), valueOffset = -position[0][1])
+                            commands.cutKey(self.hipName.GetText(), attribute = self.attributes[i],time = ())
+                            commands.pasteKey(self.rootName.GetText(), attribute = self.attributes[i],time = (0,0), valueOffset = -position[0][1])
                     else:
-                        commands.cutKey(self.hipName.GetText(), attribute = attributes[i], time = ())
-                        commands.pasteKey(self.rootName.GetText(), attribute = attributes[i], time = (0,0), valueOffset = -position[0][2])
+                        commands.cutKey(self.hipName.GetText(), attribute = self.attributes[i], time = ())
+                        commands.pasteKey(self.rootName.GetText(), attribute = self.attributes[i], time = (0,0), valueOffset = -position[0][2])
         else:
             Statics.Commands.Warning("No root joint name povided in Settings tab")
+
+    def BoolToString(self, state):
+        if(state):
+            return "true" 
+            
+        return "false"
 
     def SaveConfig(self, *args):
         if(config.has_section("Settings") == False):
             config.add_section("Settings")
+
+        if(config.has_section("Attributes") == False):
+            config.add_section("Attributes")
+
         config.set("Settings", "ExportDir", self.directory)
         config.set("Settings", "RootJoint", self.rootName.GetText())
         config.set("Settings", "HipJoint", self.hipName.GetText())
@@ -242,8 +282,22 @@ class Converter:
         config.set("Settings", "ClampRoot", self.omClamp.GetValue())
         config.set("Settings", "WorldUp", self.worldUpAxis.GetValue())
         config.set("Settings", "WorldForward", self.worldForwardAxis.GetValue())
+
+        num = 0
+        for att in self.attributes:
+            config.set("Attributes", "Att" + str(num), self.attributes[num])
+            num += 1
+
         state = self.bRootJoint.GetValue()
-        config.set("Settings", "AddRoot", "true" if state == True else "false" )
+        config.set("Settings", "AddRoot", self.BoolToString(state) )
+        state = self.bttnCutAllKeys.GetValue()
+        config.set("Settings", "CutAllYKeys", self.BoolToString(state) )
+        state = self.translateX.GetValue()
+        config.set("Settings", "Translate X", self.BoolToString(state) )
+        state = self.translateY.GetValue()
+        config.set("Settings", "Translate Y", self.BoolToString(state) )
+        state = self.translateZ.GetValue()
+        config.set("Settings", "Translate Z", self.BoolToString(state) )
         file = open(configDir, "wb")
         with file as configFile:
             config.write(configFile)
@@ -262,6 +316,16 @@ class Converter:
             self.worldForwardAxis.SetValue(config.get("Settings", "WorldForward"))
             self.ffHeight.SetValue1(config.getfloat("Settings", "hipheight"))
             self.bRootJoint.SetValue(config.getboolean("Settings", "AddRoot"))
+            self.translateX.SetValue(config.getboolean("Settings", "Translate X"))
+            self.translateY.SetValue(config.getboolean("Settings", "Translate Y"))
+            self.translateZ.SetValue(config.getboolean("Settings", "Translate Z"))
+
+            items = config.items("Attributes")
+            for item in items:
+                self.attributes.append(item[1])
+
+            #self.attributes = self.attributes.split(',')
+            self.bttnCutAllKeys.SetValue(config.getboolean("Settings", "CutAllYKeys"))
             file.close()
 
     def ResetConfig(self, *args):
@@ -274,4 +338,9 @@ class Converter:
         self.worldForwardAxis.SetValue("Z")
         self.ffHeight.SetValue1(0.0)
         self.bRootJoint.SetValue(False)
+        self.translateX.SetValue(True)
+        self.translateY.SetValue(False)
+        self.translateZ.SetValue(True)
+        self.attributes = ['translateX','translateZ']
+        self.bttnCutAllKeys.SetValue(True)
 
